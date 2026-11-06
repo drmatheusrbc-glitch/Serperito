@@ -1,0 +1,6 @@
+{
+  "name": "PeríciaMed - Gestão de Perícias Médico-Legais",
+  "description": "Software especializado para médicos peritos judiciais com cadastro de nomeações, controle rigoroso de prazos de agendamento e entrega de laudos, e notificações automáticas anti-atraso.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
