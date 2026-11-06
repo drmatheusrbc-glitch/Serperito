@@ -6,6 +6,8 @@
 
 header('Content-Type: application/json; charset=UTF-8');
 
+require_once __DIR__ . '/db.php';
+
 // Somente o servidor Next.js da Vercel pode acessar esta API.
 $tokenEsperado = defined('SERPERITO_API_TOKEN') ? SERPERITO_API_TOKEN : '';
 $tokenRecebido = $_SERVER['HTTP_X_SERPERITO_TOKEN'] ?? '';
@@ -14,8 +16,6 @@ if (!$tokenEsperado || !$tokenRecebido || !hash_equals($tokenEsperado, $tokenRec
     echo json_encode(['error' => 'Não autorizado.']);
     exit;
 }
-
-require_once __DIR__ . '/db.php';
 
 $conexaoInfo = obterConexaoPDO();
 $pdo = $conexaoInfo['pdo'];
