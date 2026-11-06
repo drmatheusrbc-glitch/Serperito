@@ -9,19 +9,10 @@ export interface StatusNuvem {
   totalNuvem?: number;
 }
 
-// Tenta /api/pericias primeiro e faz fallback para /api/pericias.php na HostGator
+// O navegador conversa somente com a API autenticada da própria aplicação.
+// Credenciais da HostGator ficam exclusivamente no servidor Next.js.
 async function requisicaoApi(url: string, options: RequestInit = {}): Promise<Response> {
-  try {
-    const res = await fetch(url, options);
-    if (res.status === 404 || res.status === 405) {
-      const phpUrl = url.replace('/api/pericias', '/api/pericias.php');
-      return await fetch(phpUrl, options);
-    }
-    return res;
-  } catch {
-    const phpUrl = url.replace('/api/pericias', '/api/pericias.php');
-    return await fetch(phpUrl, options);
-  }
+  return fetch(url, { ...options, credentials: 'same-origin' });
 }
 
 /**
