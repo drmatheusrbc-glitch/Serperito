@@ -10,6 +10,12 @@ import { CalendarioPrazos } from '@/components/CalendarioPrazos';
 import { ModalNovaPericia } from '@/components/ModalNovaPericia';
 import { ModalDetalhesPericia } from '@/components/ModalDetalhesPericia';
 import { ModalAssistenteIA } from '@/components/ModalAssistenteIA';
+import { ModalConexaoNuvem } from '@/components/ModalConexaoNuvem';
+import { 
+  buscarPericiasNuvem, 
+  salvarPericiaNuvem, 
+  excluirPericiaNuvem 
+} from '@/lib/api-sync';
 
 import { PericiaItem, PericiaStatus, PrazoAnalise } from '@/types/pericia';
 import { 
@@ -119,12 +125,10 @@ export default function Home() {
     }, 4000);
   };
 
-  // Limpa chaves legadas se existirem
-  useEffect(() => {
-    try {
-      localStorage.removeItem('periciamed_pericias_v1');
-    } catch {}
-  }, []);
+  // Nuvem HostGator MySQL
+  const [nuvemConectada, setNuvemConectada] = useState(false);
+  const [sincronizandoNuvem, setSincronizandoNuvem] = useState(false);
+  const [modalNuvemAberto, setModalNuvemAberto] = useState(false);
 
   // Salva no localStorage e dispara evento para sincronização reativa
   const salvarPericias = (novasPericias: PericiaItem[]) => {
@@ -135,6 +139,28 @@ export default function Home() {
       console.error('Erro ao salvar no localStorage:', e);
     }
   };
+
+  // Limpa chaves legadas e carrega dados do banco MySQL se conectado
+  useEffect(() => {
+    try {
+      localStorage.removeItem('periciamed_pericias_v1');
+    } catch {}
+
+    let ativo = true;
+    buscarPericiasNuvem().then(res => {
+      if (!ativo) return;
+      if (res.conectado) {
+        setNuvemConectada(true);
+        if (res.pericias && res.pericias.length > 0) {
+          salvarPericias(res.pericias);
+        }
+      }
+    });
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   const handleToggleSom = (val: boolean) => {
     try {
@@ -175,6 +201,16 @@ export default function Home() {
     if (somHabilitado) {
       tocarAlertaSonoro(false);
     }
+
+    // Sincronizar com o banco MySQL da HostGator em segundo plano
+    setSincronizandoNuvem(true);
+    salvarPericiaNuvem(item).then(res => {
+      if (res.conectado) {
+        setNuvemConectada(true);
+      }
+    }).finally(() => {
+      setSincronizandoNuvem(false);
+    });
   };
 
   const handleExcluir = (id: string) => {
@@ -190,18 +226,24 @@ export default function Home() {
         }
         setConfirmacaoDialog(prev => ({ ...prev, aberto: false }));
         exibirToast('Perícia removida com sucesso.');
+
+        // Exclui também do banco MySQL
+        setSincronizandoNuvem(true);
+        excluirPericiaNuvem(id).finally(() => setSincronizandoNuvem(false));
       },
     });
   };
 
   const handleAvancarStatus = (id: string, novoStatus: PericiaStatus) => {
+    let itemAtualizado: PericiaItem | null = null;
     const novas = pericias.map(p => {
       if (p.id === id) {
-        return {
+        itemAtualizado = {
           ...p,
           status: novoStatus,
           updatedAt: new Date().toISOString().split('T')[0],
         };
+        return itemAtualizado;
       }
       return p;
     });
@@ -210,6 +252,11 @@ export default function Home() {
       tocarAlertaSonoro(false);
     }
     exibirToast('Fase pericial atualizada.');
+
+    if (itemAtualizado) {
+      setSincronizandoNuvem(true);
+      salvarPericiaNuvem(itemAtualizado).finally(() => setSincronizandoNuvem(false));
+    }
   };
 
   const handleAbrirAssistente = (p: PericiaItem, tipo: string) => {
@@ -272,6 +319,9 @@ export default function Home() {
         setSomHabilitado={handleToggleSom}
         onSelecionarPericia={p => setPericiaDetalhes(p)}
         onTestarNotificacao={handleTestarNotificacao}
+        nuvemConectada={nuvemConectada}
+        sincronizandoNuvem={sincronizandoNuvem}
+        onAbrirModalNuvem={() => setModalNuvemAberto(true)}
       />
 
       {/* 2. Hero Section */}
@@ -518,6 +568,18 @@ export default function Home() {
         onFechar={() => setModalAssistenteAberto(false)}
         periciaInicial={assistentePericiaSelecionada}
         tipoInicial={assistenteTipo}
+      />
+
+      <ModalConexaoNuvem
+        aberto={modalNuvemAberto}
+        onFechar={() => setModalNuvemAberto(false)}
+        conectado={nuvemConectada}
+        periciasLocais={pericias}
+        onSincronizacaoConcluida={(sincronizadas) => {
+          setNuvemConectada(true);
+          salvarPericias(sincronizadas);
+          exibirToast('Perícias sincronizadas com o banco de dados da HostGator.');
+        }}
       />
 
       {/* Toast Notification */}

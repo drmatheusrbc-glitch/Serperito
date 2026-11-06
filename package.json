@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:hostgator": "node scripts/build-hostgator.js",
     "start": "node server.js",
     "lint": "eslint .",
     "clean": "next clean"

@@ -1,0 +1,68 @@
+# ==============================================================================
+# Configuração Apache (.htaccess) para HostGator - Sistema Perícias Médicas
+# ==============================================================================
+
+# Garantir tipos MIME corretos (evita que o navegador rejeite o CSS ou JavaScript)
+<IfModule mod_mime.c>
+    AddType text/css .css
+    AddType application/javascript .js .mjs
+    AddType image/svg+xml .svg
+    AddType application/json .json
+    AddCharset UTF-8 .css .js .json .html
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    Options -MultiViews
+    Options +FollowSymLinks
+
+    # Rotas das APIs PHP da HostGator
+    RewriteRule ^api/gemini/?$ api/gemini.php [L,QSA]
+    RewriteRule ^api/pericias/?$ api/pericias.php [L,QSA]
+
+    # Servir arquivos e pastas existentes diretamente sem reescrita
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Se um arquivo estático do _next não for encontrado, retornar 404 em vez de index.html
+    # (Evita que o navegador receba HTML ao solicitar CSS/JS)
+    RewriteCond %{REQUEST_URI} ^.*_next/.*$
+    RewriteRule ^ - [R=404,L]
+
+    # Redirecionar todas as demais rotas da SPA para o index.html
+    RewriteRule ^ index.html [L]
+</IfModule>
+
+# Bloquear acesso público direto aos arquivos sensíveis de configuração e banco
+<FilesMatch "^(config\.php|db\.php)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Otimização de Performance: Compressão GZIP
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json image/svg+xml
+</IfModule>
+
+# Cache de ativos estáticos
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+</IfModule>
+
+# Headers de Segurança Básicos
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>

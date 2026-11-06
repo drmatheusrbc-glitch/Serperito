@@ -64,15 +64,33 @@ function ModalAssistenteIAConteudo({
     setCarregando(true);
     setErro(null);
     try {
-      const res = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo: tipoDoc,
-          pericia,
-          quesitosTexto: quesitosTexto || undefined,
-        }),
-      });
+      const payload = {
+        tipo: tipoDoc,
+        pericia,
+        quesitosTexto: quesitosTexto || undefined,
+      };
+
+      let res: Response;
+      try {
+        res = await fetch('/api/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (res.status === 404 || res.status === 405) {
+          res = await fetch('/api/gemini.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+        }
+      } catch {
+        res = await fetch('/api/gemini.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
 
       const data = await res.json();
       if (!res.ok) {
@@ -90,36 +108,55 @@ function ModalAssistenteIAConteudo({
 
   useEffect(() => {
     let cancelado = false;
-    fetch('/api/gemini', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tipo: tipoInicial,
-        pericia,
-        quesitosTexto: quesitosTexto || undefined,
-      }),
-    })
-      .then(res => res.json())
-      .then(data => {
+    const payload = {
+      tipo: tipoInicial,
+      pericia,
+      quesitosTexto: quesitosTexto || undefined,
+    };
+
+    (async () => {
+      try {
+        let res: Response;
+        try {
+          res = await fetch('/api/gemini', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          if (res.status === 404 || res.status === 405) {
+            res = await fetch('/api/gemini.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+          }
+        } catch {
+          res = await fetch('/api/gemini.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+        }
+
+        const data = await res.json();
         if (!cancelado) {
-          if (data.error) {
-            setErro(data.error);
+          if (!res.ok || data.error) {
+            setErro(data.error || 'Falha ao gerar documento com IA.');
           } else {
             setTextoGerado(data.texto || '');
           }
         }
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         if (!cancelado) {
           const msg = err instanceof Error ? err.message : 'Erro de conexão';
           setErro(msg);
         }
-      })
-      .finally(() => {
+      } finally {
         if (!cancelado) {
           setCarregando(false);
         }
-      });
+      }
+    })();
 
     return () => {
       cancelado = true;

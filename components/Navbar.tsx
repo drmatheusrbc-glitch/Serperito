@@ -13,7 +13,8 @@ import {
   AlertTriangle,
   Clock,
   ShieldCheck,
-  FileText
+  FileText,
+  Database
 } from 'lucide-react';
 import { PericiaItem, PrazoAnalise } from '@/types/pericia';
 import { formatarDataBR } from '@/lib/prazos';
@@ -27,6 +28,9 @@ interface NavbarProps {
   setSomHabilitado: (val: boolean) => void;
   onSelecionarPericia: (p: PericiaItem) => void;
   onTestarNotificacao: () => void;
+  nuvemConectada: boolean;
+  sincronizandoNuvem: boolean;
+  onAbrirModalNuvem: () => void;
 }
 
 export function Navbar({
@@ -38,6 +42,9 @@ export function Navbar({
   setSomHabilitado,
   onSelecionarPericia,
   onTestarNotificacao,
+  nuvemConectada,
+  sincronizandoNuvem,
+  onAbrirModalNuvem,
 }: NavbarProps) {
   const [dropdownAberto, setDropdownAberto] = useState(false);
 
@@ -118,6 +125,23 @@ export function Navbar({
           {/* Action Zone - Zone 3 */}
           <div className="flex items-center gap-2 shrink-0">
             
+            {/* Status do Banco MySQL / Nuvem */}
+            <button
+              onClick={onAbrirModalNuvem}
+              title={nuvemConectada ? 'Banco MySQL Conectado (Clique para gerenciar)' : 'Banco MySQL Offline (Clique para configurar)'}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
+                nuvemConectada
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                  : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+              }`}
+            >
+              <Database className="w-3.5 h-3.5 text-current shrink-0" />
+              <span className="hidden sm:inline">
+                {sincronizandoNuvem ? 'Salvando...' : nuvemConectada ? 'Nuvem Ativa' : 'Nuvem Pendente'}
+              </span>
+              <span className={`w-2 h-2 rounded-full shrink-0 ${nuvemConectada ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+            </button>
+
             {/* Audio Toggle */}
             <button
               onClick={() => setSomHabilitado(!somHabilitado)}
